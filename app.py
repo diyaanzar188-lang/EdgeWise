@@ -6,13 +6,14 @@ import json
 from copy import deepcopy
 from collections.abc import Mapping
 from datetime import datetime, timezone
+from html import escape
 import logging
 from uuid import uuid4
 
 import pandas as pd
 import streamlit as st
 
-from ai_explainer import explain_assessment
+from ai_explainer import DecisionExplanation, explain_assessment, explain_decision
 from decision_engine import TIER_ORDER, evaluate_placement
 from infrastructure_data import (
     DEFAULT_REQUIREMENTS,
@@ -88,6 +89,7 @@ def initialize_state():
         "assessment_requirements_snapshot": None, "assessment_profiles_snapshot": None,
         "assessment_id": None, "assessment_created_at": None,
         "explanation_generated_for_assessment_id": None,
+        "decision_explanation": None,
         "custom_profiles_draft": get_demo_profiles(), "pending_profiles_json": None,
         "profile_json_sync": False,
         "profile_mode_migrated": False,
@@ -581,15 +583,46 @@ elif page == "Decision Explanation":
         if st.button("Go to assessment", type="primary"):
             go("Infrastructure Assessment"); st.rerun()
     else:
-        st.markdown("<div class='hero'><div class='eyebrow'>Decision summary</div><p style='color:#252525;font-size:1.1rem'>This explanation uses the current saved inputs and the latest deterministic assessment.</p></div>", unsafe_allow_html=True)
-        st.markdown(explain_assessment(result))
-        st.subheader("How to read this result")
-        st.write("First, EdgeWise checks latency, required onsite residency, minimum compute, bandwidth, and monthly cost. Any known failure makes a tier infeasible. Missing or invalid capability data leaves it unverified unless another known failure already makes it infeasible.")
-        st.write("Only tiers that pass every applicable hard constraint receive the approved weighted suitability score and appear in the ranking. A score is a comparison aid, not a probability of success.")
-        if st.session_state.explanation_generated_for_assessment_id != st.session_state.assessment_id:
+        if (st.session_state.decision_explanation is None
+                or st.session_state.decision_explanation.get("assessment_id") != st.session_state.assessment_id):
+            explanation = explain_decision(st.session_state.assessment_requirements_snapshot, result)
+            st.session_state.decision_explanation = {
+                "assessment_id": st.session_state.assessment_id,
+                "text": explanation.text,
+                "source": explanation.source,
+            }
             st.session_state.explanation_generated_for_assessment_id = st.session_state.assessment_id
             st.session_state.understood = True
             st.rerun()
+        explanation = DecisionExplanation(
+            text=st.session_state.decision_explanation["text"],
+            source=st.session_state.decision_explanation["source"],
+        )
+        st.markdown(
+            '<div class="soft-card"><div class="eyebrow">' + escape(explanation.source)
+            + '</div><h3>Decision summary</h3><p>' + escape(explanation.text) + '</p></div>',
+            unsafe_allow_html=True,
+        )
+        if result["recommendation"]:
+            selected = next(tier for tier in result["tiers"] if tier["tier"] == result["recommendation"])
+            st.subheader("Why this recommendation was selected")
+            st.write(f"{TIER_LABELS[result['recommendation']]} is the engine's highest-ranked feasible tier. Its actual suitability score is {selected['score']:.2f}/100.")
+        else:
+            st.subheader("Why there is no recommendation")
+            st.write("The decision engine found no tier with confirmed feasibility. See each tier's actual status and constraint evidence below.")
+        st.subheader("Constraint evaluation, unknowns, and score details")
+        for tier in result["tiers"]:
+            with st.expander(f"{TIER_LABELS[tier['tier']]} · {tier['status']}"):
+                for con in tier["constraints"]:
+                    actual = "Unknown" if con["actual"] is None else con["actual"]
+                    required = "Not applicable" if con["required"] is None else con["required"]
+                    st.write(f"**{con['constraint']} · {con['status']}** — {con['reason']} (actual: {actual}; required: {required})")
+                if tier["score_breakdown"]:
+                    breakdown = tier["score_breakdown"]
+                    st.dataframe(pd.DataFrame([{"Factor": name.replace("_", " ").title(), "Weight": factor["weight"], "Normalized utility": factor["normalized_value"], "Weighted points": factor["weighted_points"]} for name, factor in breakdown.items() if name != "total_score"]), hide_index=True, use_container_width=True)
+        st.subheader("Deterministic assessment explanation")
+        st.markdown(explain_assessment(result))
+        st.write("The local explanation is always available. Optional Qualcomm AI text adds explanatory language only; feasibility, scores, ranking, and recommendation come from the local decision engine.")
         st.success("Decision explanation generated for this assessment.")
         back_results, back_dashboard = st.columns(2)
         with back_results:
