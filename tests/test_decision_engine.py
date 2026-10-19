@@ -217,7 +217,7 @@ def test_reasons_exist_for_every_status_and_constraint():
 
 def test_local_explanation_uses_real_assessment_without_ai_service():
     assessment = evaluate_placement(REQ, DEMO)
-    explanation = explain_assessment(assessment)
+    explanation = explain_assessment(assessment, include_details=True)
     assert "Far Edge" in explanation
     assert "suitability score" in explanation
     assert "not a probability" in explanation
@@ -227,7 +227,7 @@ def test_local_explanation_uses_real_assessment_without_ai_service():
     assert "Cloud is infeasible" in explanation
     for label in ("latency:", "onsite residency:", "compute:", "bandwidth:", "monthly cost:"):
         assert label in explanation
-    assert explanation == explain_assessment(assessment)
+    assert explanation == explain_assessment(assessment, include_details=True)
 
 
 def test_local_explanation_handles_no_confirmed_feasible_tier():
@@ -243,7 +243,7 @@ def test_local_explanation_identifies_unknown_capability_and_its_effect():
     for profile in profiles.values():
         profile["latency_ms"] = None
     tier = evaluate_placement(REQ, profiles)
-    explanation = explain_assessment(tier)
+    explanation = explain_assessment(tier, include_details=True)
     assert "latency: UNVERIFIED" in explanation
     assert "missing or invalid" in explanation
     assert "actual: None" in explanation

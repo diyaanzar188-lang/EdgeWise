@@ -44,12 +44,13 @@ def assessment():
 
 @pytest.fixture(autouse=True)
 def configured_api(monkeypatch):
+    monkeypatch.setattr(ai_explainer, "_load_local_env", lambda: None)
     monkeypatch.setenv("QUALCOMM_IMAGINE_API_KEY", "test-key")
     monkeypatch.setenv("QUALCOMM_IMAGINE_ENDPOINT", "https://example.invalid/chat/completions")
     monkeypatch.setenv("QUALCOMM_IMAGINE_MODEL", "Llama-3.1-8B")
 
 
-def test_successful_response_labels_source_and_sends_real_inputs(monkeypatch, assessment):
+def test_successful_response_labels_source_and_sends_authoritative_assessment_evidence(monkeypatch, assessment):
     captured = {}
 
     def fake_urlopen(request, timeout):
@@ -65,8 +66,17 @@ def test_successful_response_labels_source_and_sends_real_inputs(monkeypatch, as
     assert captured["request"].full_url == "https://example.invalid/chat/completions"
     sent = json.loads(captured["request"].data.decode())
     supplied = json.loads(sent["messages"][1]["content"])
-    assert supplied == {"requirements": REQUIREMENTS, "assessment": assessment}
+    assert supplied == {"assessment_evidence": ai_explainer._summary_evidence(assessment)}
+    assert supplied["assessment_evidence"]["recommendation"] == "Far Edge"
+    assert supplied["assessment_evidence"]["status"] == "FEASIBLE"
+    assert all(c["status"] == "PASS" for c in supplied["assessment_evidence"]["constraints"])
+    assert "regional_edge" not in json.dumps(supplied)
+    assert "cloud" not in json.dumps(supplied)
     assert sent["model"] == "Llama-3.1-8B"
+    assert "2-3 sentences" in sent["messages"][0]["content"]
+    assert "Mention a trade-off only when directly supported" in sent["messages"][0]["content"]
+    assert "Do not invent thresholds, latency limits" in sent["messages"][0]["content"]
+    assert "Never calculate, alter" in sent["messages"][0]["content"]
     assert assessment["recommendation"] == "far_edge"
 
 
@@ -113,3 +123,39 @@ def test_http_error_uses_deterministic_fallback(monkeypatch, assessment):
 def test_malformed_model_response_uses_deterministic_fallback(monkeypatch, assessment, response_body):
     monkeypatch.setattr(ai_explainer, "urlopen", lambda *args, **kwargs: MockResponse(response_body))
     assert_deterministic_fallback(explain_decision(REQUIREMENTS, assessment), assessment)
+
+
+@pytest.mark.parametrize("model_text", [
+    "Far Edge latency is 12 ms, above the 30 ms maximum, but all constraints pass.",
+    "Far Edge meets the latency requirement, and a 20 ms limit is acceptable.",
+    "Cloud is recommended for this workload.",
+])
+def test_unsupported_or_contradictory_constraint_claim_uses_fallback(monkeypatch, assessment, model_text):
+    body = json.dumps({"choices": [{"message": {"content": model_text}}]}).encode()
+    monkeypatch.setattr(ai_explainer, "urlopen", lambda *args, **kwargs: MockResponse(body))
+
+    assert_deterministic_fallback(explain_decision(REQUIREMENTS, assessment), assessment)
+
+
+def test_deterministic_recommendation_summary_is_concise_and_uses_supported_tradeoff(assessment):
+    explanation = explain_assessment(assessment)
+
+    assert "Far Edge is recommended" in explanation
+    assert "confirmed to meet every applicable hard constraint" in explanation
+    assert "weakest scored dimension is monthly cost" in explanation
+    assert "not a probability" in explanation
+    assert len(explanation.split(". ")) <= 3
+    assert "Regional Edge:" not in explanation
+    assert "Cloud:" not in explanation
+
+
+def test_deterministic_no_recommendation_summary_stays_concise():
+    profiles = {tier: dict(profile) for tier, profile in PROFILES.items()}
+    for profile in profiles.values():
+        profile["compute"] = "low"
+    assessment = evaluate_placement(REQUIREMENTS, profiles)
+
+    explanation = explain_assessment(assessment)
+
+    assert "No placement is recommended" in explanation
+    assert len(explanation.split(". ")) <= 2

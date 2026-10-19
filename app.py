@@ -621,8 +621,18 @@ elif page == "Decision Explanation":
                     breakdown = tier["score_breakdown"]
                     st.dataframe(pd.DataFrame([{"Factor": name.replace("_", " ").title(), "Weight": factor["weight"], "Normalized utility": factor["normalized_value"], "Weighted points": factor["weighted_points"]} for name, factor in breakdown.items() if name != "total_score"]), hide_index=True, use_container_width=True)
         st.subheader("Deterministic assessment explanation")
-        st.markdown(explain_assessment(result))
+        st.markdown(explain_assessment(result, include_details=True))
         st.write("The local explanation is always available. Optional Qualcomm AI text adds explanatory language only; feasibility, scores, ranking, and recommendation come from the local decision engine.")
+        st.subheader("Feasible alternatives")
+        alternatives = [row for row in result["ranking"] if row["tier"] != result["recommendation"]]
+        if alternatives:
+            st.dataframe(pd.DataFrame([{"Rank": row["rank"], "Tier": TIER_LABELS[row["tier"]], "Score": row["score"]} for row in alternatives]), hide_index=True, use_container_width=True)
+        else:
+            st.caption("No additional feasible alternatives are available.")
+        with st.expander("How to read this result", expanded=False):
+            st.write("First, EdgeWise checks latency, required onsite residency, minimum compute, bandwidth, and monthly cost. Any known failure makes a tier infeasible. Missing or invalid capability data leaves it unverified unless another known failure already makes it infeasible.")
+            st.write("Only tiers that pass every applicable hard constraint receive the approved weighted suitability score and appear in the ranking. A score is a comparison aid, not a probability of success.")
+        st.checkbox("I understand this decision and its trade-offs", key="understood")
         st.success("Decision explanation generated for this assessment.")
         back_results, back_dashboard = st.columns(2)
         with back_results:

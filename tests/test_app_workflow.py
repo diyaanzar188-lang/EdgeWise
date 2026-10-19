@@ -3,12 +3,20 @@
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
+import ai_explainer
 from decision_engine import evaluate_placement
 from infrastructure_data import DEFAULT_REQUIREMENTS, get_demo_profiles
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
+
+
+@pytest.fixture(autouse=True)
+def disable_live_explanation_api(monkeypatch):
+    monkeypatch.setattr(ai_explainer, "_load_local_env", lambda: None)
+    monkeypatch.setenv("QUALCOMM_IMAGINE_API_KEY", "")
 
 
 def _click(at: AppTest, label: str) -> None:
