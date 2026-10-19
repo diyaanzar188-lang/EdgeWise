@@ -27,6 +27,8 @@ py -m pytest
 
 The default requirements and four infrastructure profiles are illustrative. They are not live provider measurements or quotes. Custom profile imports must use the exact four tier identifiers and supported capability fields; capability values may be `null` or omitted when unknown.
 
+For `Specific Region Only`, custom profiles may include a `location` value. A match requires exact equality after trimming surrounding whitespace and ignoring case (for example, ` India ` matches `india`). Missing or blank locations remain unknown and never count as a match. Existing `data_must_stay_onsite` booleans migrate explicitly: `true` means `On-site Only` and `false` means `No Restriction`; exact legacy strings `Yes` and `No` are handled the same way. Other legacy values are rejected.
+
 Only confirmed feasible tiers receive a score. Scores use the approved weights: latency 25%, data residency 20%, compute 20%, bandwidth 15%, and monthly cost 20%. The score is a suitability comparison, not a probability. Exact score ties follow canonical tier order: `on_device`, `far_edge`, `regional_edge`, `cloud`.
 
 `decision_engine.py` has no AI dependency. `ai_explainer.py` creates a local explanation from the structured result and does not alter the recommendation.

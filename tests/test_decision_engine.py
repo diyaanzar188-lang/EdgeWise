@@ -43,7 +43,7 @@ def test_demonstration_scenario_status_and_recommendation():
 
 @pytest.mark.parametrize(("field", "value", "req_field", "req_value", "constraint"), [
     ("latency_ms", 21, "max_latency_ms", 20, "latency"),
-    ("data_stays_onsite", False, "data_must_stay_onsite", True, "onsite residency"),
+    ("data_stays_onsite", False, "data_must_stay_onsite", True, "data residency"),
     ("compute", "low", "min_compute", "medium", "compute"),
     ("bandwidth_mbps", 49, "required_bandwidth_mbps", 50, "bandwidth"),
     ("monthly_cost", 301, "max_monthly_cost", 300, "monthly cost"),
@@ -87,7 +87,7 @@ def test_compute_ordering(minimum, compute, expected):
 
 def test_onsite_constraint_is_not_applicable_when_not_required():
     result = evaluate_placement(dict(REQ, data_must_stay_onsite=False), uniform_profiles())
-    constraint = next(c for c in tier_result(result, "far_edge")["constraints"] if c["constraint"] == "onsite residency")
+    constraint = next(c for c in tier_result(result, "far_edge")["constraints"] if c["constraint"] == "data residency")
     assert constraint["status"] == "NOT_APPLICABLE"
     assert constraint["required"] is None
 
@@ -248,4 +248,117 @@ def test_local_explanation_identifies_unknown_capability_and_its_effect():
     assert "missing or invalid" in explanation
     assert "actual: None" in explanation
     assert "No placement is recommended" in explanation
+
+REGION_REQ = {
+    "max_latency_ms": 20,
+    "data_residency": "Specific Region Only",
+    "permitted_region": "India",
+    "min_compute": "medium",
+    "required_bandwidth_mbps": 50,
+    "max_monthly_cost": 300,
+}
+
+
+def modern_requirements(residency, permitted_region=None):
+    requirements = {key: value for key, value in REQ.items() if key != "data_must_stay_onsite"}
+    requirements["data_residency"] = residency
+    requirements["permitted_region"] = permitted_region
+    return requirements
+
+
+def residency_constraint(tier):
+    return next(item for item in tier["constraints"] if item["constraint"] == "data residency")
+
+
+def test_on_site_only_compliant_violation_and_unknown_residency():
+    req = modern_requirements("On-site Only")
+    compliant = tier_result(evaluate_placement(req, uniform_profiles()), "far_edge")
+    profiles = uniform_profiles()
+    profiles["far_edge"]["data_stays_onsite"] = False
+    violation = tier_result(evaluate_placement(req, profiles), "far_edge")
+    profiles["far_edge"]["data_stays_onsite"] = None
+    unknown = tier_result(evaluate_placement(req, profiles), "far_edge")
+    assert compliant["status"] == "FEASIBLE"
+    assert residency_constraint(compliant)["status"] == "PASS"
+    assert violation["status"] == "INFEASIBLE"
+    assert residency_constraint(violation)["status"] == "FAIL"
+    assert unknown["status"] == "UNVERIFIED"
+    assert residency_constraint(unknown)["status"] == "UNVERIFIED"
+
+
+def region_profiles(location):
+    base = {"latency_ms": 5, "data_stays_onsite": True, "compute": "high",
+            "bandwidth_mbps": 100, "monthly_cost": 100}
+    if location is not ...:
+        base["location"] = location
+    return uniform_profiles(base)
+
+
+def test_specific_region_matching_and_known_mismatch():
+    match = tier_result(evaluate_placement(REGION_REQ, region_profiles("  iNdIa ")), "far_edge")
+    mismatch = tier_result(evaluate_placement(REGION_REQ, region_profiles("Singapore")), "far_edge")
+    assert match["status"] == "FEASIBLE"
+    assert residency_constraint(match)["status"] == "PASS"
+    assert "case-insensitive exact match" in residency_constraint(match)["reason"]
+    assert mismatch["status"] == "INFEASIBLE"
+    assert residency_constraint(mismatch)["status"] == "FAIL"
+
+
+def test_specific_region_unknown_location_and_missing_permitted_region():
+    unknown = tier_result(evaluate_placement(REGION_REQ, region_profiles(None)), "far_edge")
+    assert unknown["status"] == "UNVERIFIED"
+    assert unknown["score"] is None
+    assert residency_constraint(unknown)["status"] == "UNVERIFIED"
+    for region in (None, "", "   "):
+        invalid = evaluate_placement(dict(REGION_REQ, permitted_region=region), region_profiles("India"))
+        assert not invalid["valid"]
+        assert any("permitted_region" in error for error in invalid["errors"])
+
+    invalid_location = evaluate_placement(REGION_REQ, region_profiles(42))
+    assert not invalid_location["valid"]
+    assert any("location must be text or null" in error for error in invalid_location["errors"])
+
+
+def test_no_restriction_does_not_reject_or_score_by_location():
+    req = modern_requirements("No Restriction")
+    for location in ("India", "Singapore", None, ...):
+        tier = tier_result(evaluate_placement(req, region_profiles(location)), "far_edge")
+        assert tier["status"] == "FEASIBLE"
+        assert residency_constraint(tier)["status"] == "NOT_APPLICABLE"
+
+
+def test_residency_failure_precedes_weighted_scoring_and_recommendation():
+    profiles = region_profiles("Outside")
+    result = evaluate_placement(REGION_REQ, profiles)
+    assert all(tier["status"] == "INFEASIBLE" for tier in result["tiers"])
+    assert all(tier["score"] is None for tier in result["tiers"])
+    assert result["ranking"] == []
+    assert result["recommendation"] is None
+
+
+@pytest.mark.parametrize(("legacy", "expected"), [
+    (True, "On-site Only"), (False, "No Restriction"), ("Yes", "On-site Only"), ("No", "No Restriction"),
+])
+def test_legacy_residency_values_are_migrated_explicitly(legacy, expected):
+    result = evaluate_placement(dict(REQ, data_must_stay_onsite=legacy), uniform_profiles())
+    assert result["valid"]
+    tier = tier_result(result, "far_edge")
+    if expected == "On-site Only":
+        assert residency_constraint(tier)["status"] == "PASS"
+    else:
+        assert residency_constraint(tier)["status"] == "NOT_APPLICABLE"
+
+
+@pytest.mark.parametrize("legacy", ["maybe", "yes", "", None, 1])
+def test_ambiguous_legacy_residency_values_are_rejected(legacy):
+    result = evaluate_placement(dict(REQ, data_must_stay_onsite=legacy), uniform_profiles())
+    assert not result["valid"]
+    assert any("Legacy data_must_stay_onsite" in error for error in result["errors"])
+
+
+@pytest.mark.parametrize("value", [None, [], "Region Only", "yes"])
+def test_invalid_residency_options_return_validation_errors(value):
+    result = evaluate_placement(modern_requirements(value), uniform_profiles())
+    assert not result["valid"]
+    assert any("data_residency" in error for error in result["errors"])
 

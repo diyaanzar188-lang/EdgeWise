@@ -4,13 +4,15 @@ from typing import Literal, NotRequired, TypedDict
 
 TierId = Literal["on_device", "far_edge", "regional_edge", "cloud"]
 ComputeLevel = Literal["low", "medium", "high"]
+DataResidency = Literal["On-site Only", "Specific Region Only", "No Restriction"]
 TierStatus = Literal["FEASIBLE", "INFEASIBLE", "UNVERIFIED"]
 ConstraintStatus = Literal["PASS", "FAIL", "UNVERIFIED", "NOT_APPLICABLE"]
 
 
 class ApplicationRequirements(TypedDict):
     max_latency_ms: float
-    data_must_stay_onsite: bool
+    data_residency: DataResidency
+    permitted_region: NotRequired[str | None]
     min_compute: ComputeLevel
     required_bandwidth_mbps: float
     max_monthly_cost: float
@@ -22,6 +24,7 @@ class InfrastructureProfile(TypedDict):
     compute: NotRequired[ComputeLevel | None]
     bandwidth_mbps: NotRequired[float | None]
     monthly_cost: NotRequired[float | None]
+    location: NotRequired[str | None]
 
 
 class InfrastructureProfiles(TypedDict):

@@ -19,17 +19,20 @@ from contracts import (
 TIER_ORDER: tuple[TierId, ...] = ("on_device", "far_edge", "regional_edge", "cloud")
 REQUIREMENT_FIELDS = {
     "max_latency_ms",
-    "data_must_stay_onsite",
+    "data_residency",
     "min_compute",
     "required_bandwidth_mbps",
     "max_monthly_cost",
 }
+LEGACY_REQUIREMENT_FIELDS = (REQUIREMENT_FIELDS - {"data_residency"}) | {"data_must_stay_onsite"}
+DATA_RESIDENCY_OPTIONS = {"On-site Only", "Specific Region Only", "No Restriction"}
 CAPABILITY_FIELDS = {
     "latency_ms",
     "data_stays_onsite",
     "compute",
     "bandwidth_mbps",
     "monthly_cost",
+    "location",
 }
 COMPUTE_RANK = {"low": 1, "medium": 2, "high": 3}
 WEIGHTS = {
@@ -59,7 +62,21 @@ def _valid_capability(field: str, value: Any) -> bool:
         return type(value) is bool
     if field == "compute":
         return isinstance(value, str) and value in COMPUTE_RANK
+    if field == "location":
+        return isinstance(value, str) and bool(value.strip())
     return False
+
+
+def _normalize_requirements(requirements: Mapping[str, Any]) -> dict[str, Any]:
+    """Map only explicit legacy booleans; other legacy values remain invalid."""
+    normalized = dict(requirements)
+    if "data_must_stay_onsite" in normalized and "data_residency" not in normalized:
+        legacy_value = normalized.pop("data_must_stay_onsite")
+        if type(legacy_value) is bool:
+            normalized["data_residency"] = "On-site Only" if legacy_value else "No Restriction"
+        elif isinstance(legacy_value, str) and legacy_value in ("Yes", "No"):
+            normalized["data_residency"] = "On-site Only" if legacy_value == "Yes" else "No Restriction"
+    return normalized
 
 
 def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
@@ -67,15 +84,30 @@ def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
     if not isinstance(requirements, Mapping):
         errors.append("Requirements must be an object with exactly the five required fields.")
     else:
-        missing = REQUIREMENT_FIELDS - set(requirements)
-        extra = set(requirements) - REQUIREMENT_FIELDS
+        legacy = "data_must_stay_onsite" in requirements
+        canonical = "data_residency" in requirements
+        if legacy and canonical:
+            errors.append("Use either data_residency or the legacy data_must_stay_onsite field, not both.")
+        required_fields = LEGACY_REQUIREMENT_FIELDS if legacy and not canonical else REQUIREMENT_FIELDS
+        allowed_fields = required_fields | {"permitted_region"}
+        missing = required_fields - set(requirements)
+        extra = set(requirements) - allowed_fields
         errors.extend(f"Missing requirement field: {field}." for field in sorted(missing))
         errors.extend(f"Unsupported requirement field: {field}." for field in sorted(extra, key=str))
         for field in ("max_latency_ms", "required_bandwidth_mbps", "max_monthly_cost"):
             if field in requirements and not _finite_nonnegative(requirements[field]):
                 errors.append(f"Requirement {field} must be a finite nonnegative number.")
-        if "data_must_stay_onsite" in requirements and type(requirements["data_must_stay_onsite"]) is not bool:
-            errors.append("Requirement data_must_stay_onsite must be a boolean.")
+        legacy_value = requirements.get("data_must_stay_onsite")
+        if legacy and type(legacy_value) is not bool and not (isinstance(legacy_value, str) and legacy_value in ("Yes", "No")):
+            errors.append('Legacy data_must_stay_onsite must be boolean true/false or the exact string "Yes"/"No".')
+        residency_value = requirements.get("data_residency")
+        if canonical and (not isinstance(residency_value, str) or residency_value not in DATA_RESIDENCY_OPTIONS):
+            errors.append('Requirement data_residency must be "On-site Only", "Specific Region Only", or "No Restriction".')
+        region = requirements.get("permitted_region")
+        if region is not None and not isinstance(region, str):
+            errors.append("Requirement permitted_region must be text or null.")
+        if canonical and requirements.get("data_residency") == "Specific Region Only" and (not isinstance(region, str) or not region.strip()):
+            errors.append("A non-empty permitted_region is required for Specific Region Only.")
         if "min_compute" in requirements and (
             not isinstance(requirements["min_compute"], str)
             or requirements["min_compute"] not in COMPUTE_RANK
@@ -99,6 +131,8 @@ def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
                 continue
             extras = set(profile) - CAPABILITY_FIELDS
             errors.extend(f"Unsupported capability field in {tier}: {field}." for field in sorted(extras, key=str))
+            if "location" in profile and profile["location"] is not None and not isinstance(profile["location"], str):
+                errors.append(f"Infrastructure profile {tier} location must be text or null.")
     return errors
 
 
@@ -147,7 +181,7 @@ def evaluate_placement(
     if errors:
         return {"valid": False, "errors": errors, "tiers": [], "ranking": [], "recommendation": None}
 
-    req: Mapping[str, Any] = requirements
+    req: Mapping[str, Any] = _normalize_requirements(requirements)
     profile_map: Mapping[str, Any] = profiles
     tiers: list[TierAssessment] = []
 
@@ -155,26 +189,21 @@ def evaluate_placement(
         profile: Mapping[str, Any] = profile_map[tier]
         constraints: list[ConstraintResult] = []
 
-        # Evaluate all five hard constraints, even when data is unknown.
+        # Evaluate all non-residency hard constraints before scoring.
         for field, label, required, comparator in (
             ("latency_ms", "latency", req["max_latency_ms"], lambda a, b: a <= b),
-            ("data_stays_onsite", "onsite residency", True, lambda a, b: a is b),
             ("compute", "compute", req["min_compute"], lambda a, b: COMPUTE_RANK[a] >= COMPUTE_RANK[b]),
             ("bandwidth_mbps", "bandwidth", req["required_bandwidth_mbps"], lambda a, b: a >= b),
             ("monthly_cost", "monthly cost", req["max_monthly_cost"], lambda a, b: a <= b),
         ):
             actual = profile.get(field)
-            if field == "data_stays_onsite" and not req["data_must_stay_onsite"]:
-                constraints.append(_constraint(label, "NOT_APPLICABLE", actual, None, "Onsite residency is not required."))
-            elif not _valid_capability(field, actual):
+            if not _valid_capability(field, actual):
                 constraints.append(_constraint(label, "UNVERIFIED", actual, required, f"Cannot verify {label}: capability data is missing or invalid."))
             else:
                 passed = comparator(actual, required)
                 verdict = "PASS" if passed else "FAIL"
                 if field == "latency_ms":
                     reason = f"Latency {actual} ms is {'within' if passed else 'above'} the {required} ms maximum."
-                elif field == "data_stays_onsite":
-                    reason = "Data stays onsite as required." if passed else "Data does not stay onsite, as required."
                 elif field == "compute":
                     reason = f"Compute level {actual} {'meets' if passed else 'is below'} the {required} requirement."
                 elif field == "bandwidth_mbps":
@@ -182,6 +211,32 @@ def evaluate_placement(
                 else:
                     reason = f"Monthly cost {actual} {'is within' if passed else 'exceeds'} the {required} maximum."
                 constraints.append(_constraint(label, verdict, actual, required, reason))
+
+        residency = req["data_residency"]
+        if residency == "No Restriction":
+            constraints.append(_constraint("data residency", "NOT_APPLICABLE", profile.get("location"), None,
+                                           "No additional data-residency constraint applies."))
+        elif residency == "On-site Only":
+            actual = profile.get("data_stays_onsite")
+            if not _valid_capability("data_stays_onsite", actual):
+                constraints.append(_constraint("data residency", "UNVERIFIED", actual, residency,
+                                               "Cannot verify onsite residency because capability data is missing or invalid."))
+            else:
+                passed = actual is True
+                constraints.append(_constraint("data residency", "PASS" if passed else "FAIL", actual, residency,
+                                               "Infrastructure confirms data remains onsite." if passed else
+                                               "Infrastructure is known not to keep data onsite."))
+        else:
+            actual = profile.get("location")
+            if not _valid_capability("location", actual):
+                constraints.append(_constraint("data residency", "UNVERIFIED", actual, req.get("permitted_region"),
+                                               "Cannot verify permitted region because infrastructure location is missing or unknown."))
+            else:
+                # Matching is trimmed, case-insensitive, exact string equality.
+                permitted = req["permitted_region"]
+                passed = actual.strip().casefold() == permitted.strip().casefold()
+                constraints.append(_constraint("data residency", "PASS" if passed else "FAIL", actual, permitted,
+                                               f"Infrastructure location {actual.strip()} {'matches' if passed else 'does not match'} permitted region {permitted.strip()} (case-insensitive exact match)."))
 
         failures = [c for c in constraints if c["status"] == "FAIL"]
         unknowns = [c for c in constraints if c["status"] == "UNVERIFIED"]
