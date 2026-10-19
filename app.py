@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
-from ai_explainer import explain_assessment
+from ai_explainer import explain_decision
 from decision_engine import TIER_ORDER, evaluate_placement
 from infrastructure_data import DEFAULT_REQUIREMENTS, TIER_LABELS, get_demo_profiles
 
@@ -396,8 +397,12 @@ elif page == "Decision Explanation":
         st.error("The engine did not produce a valid assessment.")
         for error in result["errors"]: st.write(f"- {error}")
     else:
-        explanation = explain_assessment(result)
-        st.markdown('<div class="soft-card"><div class="eyebrow">Local explanation</div><h3>Executive summary</h3><p>'+explanation+'</p></div>', unsafe_allow_html=True)
+        explanation = explain_decision(st.session_state.requirements, result)
+        st.markdown(
+            '<div class="soft-card"><div class="eyebrow">' + escape(explanation.source)
+            + '</div><h3>Executive summary</h3><p>' + escape(explanation.text) + '</p></div>',
+            unsafe_allow_html=True,
+        )
         if result["recommendation"]:
             selected = next(tier for tier in result["tiers"] if tier["tier"] == result["recommendation"])
             st.subheader("Why this recommendation was selected")
@@ -418,6 +423,9 @@ elif page == "Decision Explanation":
             st.dataframe(pd.DataFrame([{"Rank": row["rank"], "Tier": TIER_LABELS[row["tier"]], "Score": row["score"]} for row in alternatives]), hide_index=True, use_container_width=True)
         else:
             st.caption("No additional feasible alternatives are available.")
+        st.subheader("How to read this result")
+        st.write("First, EdgeWise checks latency, required onsite residency, minimum compute, bandwidth, and monthly cost. Any known failure makes a tier infeasible. Missing or invalid capability data leaves it unverified unless another known failure already makes it infeasible.")
+        st.write("Only tiers that pass every applicable hard constraint receive the approved weighted suitability score and appear in the ranking. A score is a comparison aid, not a probability of success.")
         st.checkbox("I understand this decision and its trade-offs", key="understood")
         if st.session_state.understood: st.success("Workflow complete. The structured result remains the source of truth.")
         back, results = st.columns(2)
