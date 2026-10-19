@@ -147,6 +147,21 @@ def test_malformed_and_extra_profile_data_is_rejected():
     assert evaluate_placement(REQ, {**uniform_profiles(), "other": {}})["valid"] is False
 
 
+def test_malformed_mapping_keys_return_errors_instead_of_raising():
+    req = dict(REQ)
+    req[3] = "unexpected"
+    result = evaluate_placement(req, {**uniform_profiles(), 3: {}})
+    assert result["valid"] is False
+    assert result["errors"]
+
+
+def test_extremely_large_integer_requirement_is_rejected_without_overflow():
+    req = dict(REQ, max_latency_ms=10**10000)
+    result = evaluate_placement(req, uniform_profiles())
+    assert result["valid"] is False
+    assert any("finite nonnegative" in error for error in result["errors"])
+
+
 def test_scores_and_ranking_only_include_feasible_tiers():
     result = evaluate_placement(REQ, DEMO)
     for row in result["tiers"]:
@@ -206,6 +221,12 @@ def test_local_explanation_uses_real_assessment_without_ai_service():
     assert "Far Edge" in explanation
     assert "suitability score" in explanation
     assert "not a probability" in explanation
+    assert "On Device is infeasible" in explanation
+    assert "Far Edge is feasible" in explanation
+    assert "Regional Edge is infeasible" in explanation
+    assert "Cloud is infeasible" in explanation
+    for label in ("latency:", "onsite residency:", "compute:", "bandwidth:", "monthly cost:"):
+        assert label in explanation
     assert explanation == explain_assessment(assessment)
 
 
@@ -214,5 +235,17 @@ def test_local_explanation_handles_no_confirmed_feasible_tier():
     for profile in profiles.values():
         profile["compute"] = "low"
     explanation = explain_assessment(evaluate_placement(REQ, profiles))
+    assert "No placement is recommended" in explanation
+
+
+def test_local_explanation_identifies_unknown_capability_and_its_effect():
+    profiles = uniform_profiles()
+    for profile in profiles.values():
+        profile["latency_ms"] = None
+    tier = evaluate_placement(REQ, profiles)
+    explanation = explain_assessment(tier)
+    assert "latency: UNVERIFIED" in explanation
+    assert "missing or invalid" in explanation
+    assert "actual: None" in explanation
     assert "No placement is recommended" in explanation
 

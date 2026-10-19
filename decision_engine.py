@@ -42,12 +42,12 @@ WEIGHTS = {
 
 
 def _finite_nonnegative(value: Any) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-        and value >= 0
-    )
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value) and value >= 0
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 def _valid_capability(field: str, value: Any) -> bool:
@@ -70,7 +70,7 @@ def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
         missing = REQUIREMENT_FIELDS - set(requirements)
         extra = set(requirements) - REQUIREMENT_FIELDS
         errors.extend(f"Missing requirement field: {field}." for field in sorted(missing))
-        errors.extend(f"Unsupported requirement field: {field}." for field in sorted(extra))
+        errors.extend(f"Unsupported requirement field: {field}." for field in sorted(extra, key=str))
         for field in ("max_latency_ms", "required_bandwidth_mbps", "max_monthly_cost"):
             if field in requirements and not _finite_nonnegative(requirements[field]):
                 errors.append(f"Requirement {field} must be a finite nonnegative number.")
@@ -88,7 +88,7 @@ def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
         tier_keys = set(profiles)
         for tier in sorted(set(TIER_ORDER) - tier_keys):
             errors.append(f"Missing infrastructure tier: {tier}.")
-        for tier in sorted(tier_keys - set(TIER_ORDER)):
+        for tier in sorted(tier_keys - set(TIER_ORDER), key=str):
             errors.append(f"Unsupported infrastructure tier: {tier}.")
         for tier in TIER_ORDER:
             if tier not in profiles:
@@ -98,7 +98,7 @@ def _validate_inputs(requirements: Any, profiles: Any) -> list[str]:
                 errors.append(f"Infrastructure profile {tier} must be an object.")
                 continue
             extras = set(profile) - CAPABILITY_FIELDS
-            errors.extend(f"Unsupported capability field in {tier}: {field}." for field in sorted(extras))
+            errors.extend(f"Unsupported capability field in {tier}: {field}." for field in sorted(extras, key=str))
     return errors
 
 
