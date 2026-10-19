@@ -28,35 +28,35 @@ st.set_page_config(page_title="EdgeWise | Placement Advisor", page_icon="◉", l
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-:root { color-scheme:light; --bg:#F7F6F3; --side:#F1EFEA; --card:#FFFFFF; --card2:#F5F3EF; --pink:#A64C69; --purple:#8B4F76; --terracotta:#A9462D; --text:#282522; --muted:#625D57; --border:#DDD8D0; --success:#2E6947; --warning:#765719; --error:#963C32; }
+:root { color-scheme:dark; --bg:#111013; --side:#09090B; --card:#1C191F; --card2:#25212A; --pink:#E6A0D8; --purple:#B77ACD; --terracotta:#D77BCB; --text:#F7F4F8; --muted:#D0C7D5; --border:#403747; --success:#74D9B3; --warning:#F0CE85; --error:#FF858B; }
 html, body, [class*="css"] { font-family:'DM Sans',sans-serif; color:var(--text); }
 h1,h2,h3 { font-family:'Manrope',sans-serif; letter-spacing:-.035em; color:var(--text); }
 .stApp { background:var(--bg); color:var(--text); }
 .block-container { max-width:1320px; padding-top:2rem; padding-bottom:4rem; }
-.eyebrow { color:var(--terracotta); font-size:.73rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.65rem; }
-.hero { position:relative; isolation:isolate; overflow:hidden; text-align:center; background:linear-gradient(145deg,#FFFDFC,#F1EAE4); border:1px solid var(--border); border-radius:22px; padding:3.4rem 2rem 3rem; }
-.hero:before { content:''; position:absolute; z-index:-1; width:420px;height:240px;top:-100px;left:calc(50% - 210px);background:rgba(169,70,45,.10);filter:blur(75px);border-radius:50%; }
-.hero h1 { font-size:clamp(2.4rem,5.4vw,4.5rem); line-height:1.08; margin:.35rem 0 1rem; color:var(--text); }
+.eyebrow { color:var(--pink); font-size:.73rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.65rem; }
+.hero { position:relative; isolation:isolate; overflow:hidden; text-align:center; background:radial-gradient(ellipse at 50% 0%,rgba(169,107,196,.16),transparent 55%),linear-gradient(145deg,#1C191F,#17141A); border:1px solid var(--border); border-radius:22px; padding:3.4rem 2rem 3rem; }
+.hero:before { content:''; position:absolute; z-index:-1; width:420px;height:240px;top:-100px;left:calc(50% - 210px);background:rgba(215,123,203,.17);filter:blur(75px);border-radius:50%; }
+.hero h1 { font-size:clamp(2.4rem,5.4vw,4.5rem); line-height:1.08; margin:.35rem 0 1rem; background:linear-gradient(135deg,#B77ACD,#E6A0D8);-webkit-background-clip:text;background-clip:text;color:transparent; }
 .hero p { color:var(--muted); font-size:1.08rem; max-width:780px; margin:.7rem auto 0; line-height:1.7; }
 .soft-card,.tier-card,.workflow-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem 1.35rem; height:100%; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; color:var(--text); }
-.tier-card { min-height:224px; background:linear-gradient(155deg,#FFFFFF,#F7F3EF); border-color:#DCCFC8; }
-.tier-card:hover,.workflow-card:hover { transform:translateY(-2px); border-color:var(--terracotta); box-shadow:0 8px 22px rgba(75,48,34,.08); }
+.tier-card { min-height:224px; background:linear-gradient(155deg,#211B24,#19161D); border-color:#49344D; }
+.tier-card:hover,.workflow-card:hover { transform:translateY(-2px); border-color:var(--pink); box-shadow:0 9px 28px rgba(169,107,196,.13); }
 .card-number,.tier-name { color:var(--muted); font-size:.77rem; letter-spacing:.08em; }
-.tier-icon { color:var(--terracotta); font-size:1.45rem; margin:.45rem 0; }
+.tier-icon { color:var(--pink); font-size:1.45rem; margin:.45rem 0; }
 .tier-card h3 { margin:.15rem 0 .45rem; font-size:1.23rem; }
 .tier-card p,.workflow-card p { color:var(--muted); line-height:1.55; font-size:.92rem; }
-.badge { display:inline-block; margin-top:.4rem; color:var(--purple); font-size:.68rem; letter-spacing:.11em; font-weight:700; }
+.badge { display:inline-block; margin-top:.4rem; color:var(--pink); font-size:.68rem; letter-spacing:.11em; font-weight:700; }
 .workflow-card { min-height:178px; }
 .workflow-card h3 { font-size:1.08rem; margin:.55rem 0 .3rem; }
 .metric-value { font-family:'Manrope',sans-serif; font-size:1.45rem; font-weight:700; margin-top:.25rem; }
 .muted, [data-testid="stCaptionContainer"] { color:var(--muted)!important; }
 [data-testid="stSidebar"] { background:var(--side); border-right:1px solid var(--border); }
 [data-testid="stSidebar"] p,[data-testid="stSidebar"] label,[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] { color:var(--text); }
-.stButton > button, .stDownloadButton > button { border-radius:10px; border:1px solid var(--border); color:var(--text); background:#FFFFFF; transition:transform .18s ease,border-color .18s ease; }
-.stButton > button:hover,.stDownloadButton > button:hover { border-color:var(--terracotta); transform:translateY(-1px); color:var(--text); }
-.stButton > button[kind="primary"],.stDownloadButton > button[kind="primary"] { background:var(--terracotta); border:1px solid var(--terracotta); color:#FFFFFF; font-weight:700; }
-.stButton > button[kind="primary"]:hover { background:#873722; border-color:#873722; }
-[data-testid="stTextInput"] input,[data-testid="stNumberInput"] input,[data-testid="stTextArea"] textarea { background:#FFFFFF; color:var(--text); border-color:var(--border); }
+.stButton > button, .stDownloadButton > button { border-radius:10px; border:1px solid var(--border); color:var(--text); background:var(--card2); transition:transform .18s ease,border-color .18s ease; }
+.stButton > button:hover,.stDownloadButton > button:hover { border-color:var(--pink); transform:translateY(-1px); color:var(--text); }
+.stButton > button[kind="primary"],.stDownloadButton > button[kind="primary"] { background:linear-gradient(135deg,#A96BC4,#E6A0D8); border:0; color:#201624; font-weight:700; }
+.stButton > button[kind="primary"]:hover { filter:brightness(1.08); }
+[data-testid="stTextInput"] input,[data-testid="stNumberInput"] input,[data-testid="stTextArea"] textarea { background:var(--card2); color:var(--text); border-color:var(--border); }
 [data-testid="stDataFrame"],[data-testid="stDataEditor"] { border:1px solid var(--border); border-radius:12px; overflow:hidden; }
 [data-testid="stExpander"] { border-color:var(--border); background:var(--card); border-radius:12px; }
 [data-testid="stMetricLabel"] { color:var(--muted); }
@@ -70,6 +70,12 @@ PAGES = ["Home", "Dashboard", "Application Requirements", "Infrastructure Data S
          "Infrastructure Assessment", "Placement Results", "Decision Explanation"]
 STEPS = ["Define Requirements", "Configure Infrastructure", "Run Assessment", "Review Recommendation", "Understand the Decision"]
 STEP_SHORT_LABELS = ["Requirements", "Infrastructure", "Assessment", "Results", "Explanation"]
+TIER_CARDS = [
+    ("01", "◉", "On Device", "Process data directly on the user's device for immediate local response.", "LOCAL PROCESSING"),
+    ("02", "⌁", "Far Edge", "Process data close to users with responsive local infrastructure.", "NEARBY COMPUTE"),
+    ("03", "▦", "Regional Edge", "Use regional infrastructure for shared computing resources and services.", "REGIONAL SCALE"),
+    ("04", "☁", "Cloud", "Use centralized infrastructure for scalable computing and storage.", "ELASTIC CAPACITY"),
+]
 PAGE_STEP_INDEX = {
     "Application Requirements": 0,
     "Infrastructure Data Source": 1,
@@ -91,6 +97,7 @@ def initialize_state():
         "explanation_generated_for_assessment_id": None,
         "decision_explanation": None,
         "custom_profiles_draft": get_demo_profiles(), "pending_profiles_json": None,
+        "profile_preview": None, "profile_preview_mode": None,
         "profile_json_sync": False,
         "profile_mode_migrated": False,
         "page_menu": "Home", "pending_page": None, "profile_source_mode": "Demo profiles",
@@ -107,7 +114,7 @@ def initialize_state():
         st.session_state.profiles_json_draft = json.dumps(st.session_state.profiles, indent=2, allow_nan=False)
     if not st.session_state.profile_mode_migrated:
         saved_mode = st.session_state.profiles_mode
-        normalized_mode = "Custom data" if saved_mode in ("Custom data", "Custom configuration") else "Demo profiles"
+        normalized_mode = "Custom configuration" if saved_mode in ("Custom data", "Custom configuration") else "Demo profiles"
         st.session_state.profile_source_mode = normalized_mode
         st.session_state.profiles_mode = normalized_mode
         st.session_state.profile_mode_migrated = True
@@ -272,11 +279,11 @@ if st.session_state.workflow_notice:
     st.session_state.workflow_notice = ""
 
 if page == "Home":
-    st.markdown('<section class="hero"><div class="eyebrow">EDGEWISE · INTELLIGENT PLACEMENT ADVISOR</div><h1>Where should your application run?</h1><p>Compare your workload requirements with infrastructure capabilities. See which tiers meet every hard constraint, then understand the trade-offs behind the ranking.</p></section>', unsafe_allow_html=True)
+    st.markdown('<section class="hero"><div class="eyebrow">EDGEWISE | INTELLIGENT PLACEMENT ADVISOR</div><h1>Where should your application run?</h1><p>Evaluate your application requirements against infrastructure capabilities to find feasible deployment options and understand the trade-offs.</p></section>', unsafe_allow_html=True)
     st.write("")
     left, right = st.columns([1, 1])
     with left:
-        if st.button("Start assessment", type="primary", use_container_width=True):
+        if st.button("Define requirements  →", type="primary", use_container_width=True):
             go("Application Requirements")
             st.rerun()
     with right:
@@ -288,27 +295,20 @@ if page == "Home":
             st.markdown("<div class='muted' style='padding:.65rem 0'>A current assessment is available in your results.</div>", unsafe_allow_html=True)
             if st.button("Open latest results", use_container_width=True):
                 go("Placement Results"); st.rerun()
+    st.markdown('<div id="deployment-environments"></div>', unsafe_allow_html=True)
     st.subheader("Choose a deployment environment")
-    st.markdown('<p class="muted">EdgeWise evaluates the same five capabilities for each of these four tiers.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="muted">Four infrastructure tiers to evaluate against your application needs.</p>', unsafe_allow_html=True)
     cols = st.columns(4)
-    cards = [
-        ("01", "◉", "On Device", "Process data directly on the workload device.", "LOCAL PROCESSING"),
-        ("02", "⌁", "Far Edge", "Run compute close to users and connected devices.", "NEARBY COMPUTE"),
-        ("03", "▦", "Regional Edge", "Share infrastructure across a regional footprint.", "REGIONAL SCALE"),
-        ("04", "☁", "Cloud", "Use centralized infrastructure for elastic capacity.", "ELASTIC CAPACITY"),
-    ]
-    for col, (number, icon, name, description, badge) in zip(cols, cards):
+    for col, (number, icon, name, description, badge) in zip(cols, TIER_CARDS):
         col.markdown(f"<div class='tier-card'><div class='card-number'>{number}</div><div class='tier-icon'>{icon}</div><h3>{name}</h3><p>{description}</p><span class='badge'>{badge}</span></div>", unsafe_allow_html=True)
     st.subheader("A clear path to a decision")
-    flow_cards = [
-        ("01", "Define", "Save workload requirements and the limits every placement must meet."),
-        ("02", "Compare", "Check the actual tier profiles against hard constraints."),
-        ("03", "Understand", "Review feasible options, score trade-offs, and unknowns."),
-    ]
+    flow_cards = [("01", "⌘", "Define your requirements", "Set the limits your application must meet."),
+                  ("02", "⌕", "Evaluate infrastructure", "Compare infrastructure capabilities against mandatory constraints."),
+                  ("03", "✧", "Discover your recommendation", "Review feasible options, trade-offs, and the final recommendation.")]
     cols = st.columns(3)
-    for col, (number, title, description) in zip(cols, flow_cards):
-        col.markdown(f"<div class='workflow-card'><div class='card-number'>{number}</div><h3>{title}</h3><p>{description}</p></div>", unsafe_allow_html=True)
-    st.caption("Demonstration profiles are illustrative, not live measurements or provider quotes.")
+    for col, (number, icon, title, description) in zip(cols, flow_cards):
+        col.markdown(f"<div class='workflow-card'><div class='card-number'>{number} &nbsp; {icon}</div><h3>{title}</h3><p>{description}</p></div>", unsafe_allow_html=True)
+    st.caption("Demonstration profiles are illustrative. EdgeWise does not discover live infrastructure.")
 
 elif page == "Dashboard":
     heading("Workspace", "Assessment dashboard", "A live view of progress in this session.")
@@ -351,17 +351,23 @@ elif page == "Application Requirements":
     heading("Step 1 of 5", "Application requirements", "Set the workload limits that every placement option must satisfy.")
     req = st.session_state.requirements
     with st.form("requirements_form"):
+        st.markdown("### Performance")
         c1, c2 = st.columns(2)
         with c1:
             latency = st.number_input("Maximum latency (ms)", min_value=0.0, value=float(st.session_state.draft_max_latency_ms), step=1.0, key="draft_max_latency_ms")
-            onsite = st.checkbox("Data must stay onsite", value=st.session_state.draft_data_must_stay_onsite, key="draft_data_must_stay_onsite")
-            compute = st.selectbox("Minimum compute", ["low", "medium", "high"], index=["low", "medium", "high"].index(st.session_state.draft_min_compute), key="draft_min_compute")
         with c2:
             bandwidth = st.number_input("Required bandwidth (Mbps)", min_value=0.0, value=float(st.session_state.draft_required_bandwidth_mbps), step=5.0, key="draft_required_bandwidth_mbps")
+        st.markdown("### Compute and cost")
+        compute, cost_col = st.columns(2)
+        with compute:
+            minimum_compute = st.selectbox("Minimum compute", ["low", "medium", "high"], index=["low", "medium", "high"].index(st.session_state.draft_min_compute), key="draft_min_compute")
+        with cost_col:
             cost = st.number_input("Maximum monthly cost", min_value=0.0, value=float(st.session_state.draft_max_monthly_cost), step=10.0, key="draft_max_monthly_cost")
+        st.markdown("### Data residency")
+        onsite = st.checkbox("Data must stay onsite", value=st.session_state.draft_data_must_stay_onsite, key="draft_data_must_stay_onsite")
         submitted = st.form_submit_button("Save Requirements & Continue", type="primary", use_container_width=True)
     if submitted:
-        updated = {"max_latency_ms": latency, "data_must_stay_onsite": onsite, "min_compute": compute,
+        updated = {"max_latency_ms": latency, "data_must_stay_onsite": onsite, "min_compute": minimum_compute,
                    "required_bandwidth_mbps": bandwidth, "max_monthly_cost": cost}
         errors = validate_requirements(updated)
         if errors:
@@ -380,14 +386,14 @@ elif page == "Application Requirements":
         go("Dashboard"); st.rerun()
 
 elif page == "Infrastructure Data Source":
-    heading("Step 2 of 5", "Infrastructure data source", "Use the illustrative profiles or provide capability data in the exact tier-keyed schema.")
-    mode = st.radio("Profile source", ["Demo profiles", "Custom data"], horizontal=True,
+    heading("Step 2 of 5", "Infrastructure data source", "Preview the illustrative profiles or configure all four tiers with the approved capability fields.")
+    mode = st.radio("Profile source", ["Demo profiles", "Custom configuration"], horizontal=True,
                     key="profile_source_mode")
     if mode == "Demo profiles":
         st.info("These demonstration profiles are illustrative, not live telemetry, provider quotes, or automatic discovery.")
         st.dataframe(profile_editor_frame(get_demo_profiles()), use_container_width=True)
-        save_demo = st.button("Save Infrastructure & Continue", type="primary")
-        if save_demo:
+        demo_confirmed = st.checkbox("I understand these profiles are illustrative", key="demo_confirm")
+        if st.button("Use demo profiles", type="primary", disabled=not demo_confirmed):
             changed = st.session_state.profiles != get_demo_profiles()
             st.session_state.profiles = get_demo_profiles()
             st.session_state.profiles_mode = mode
@@ -398,52 +404,75 @@ elif page == "Infrastructure Data Source":
                 st.session_state.explanation_generated_for_assessment_id = None
             go("Infrastructure Assessment"); st.rerun()
     else:
-        st.caption("Set unknown capabilities to null or leave them blank. Extra fields are rejected.")
+        st.caption("Canonical tiers: on_device, far_edge, regional_edge, cloud. Missing or null values remain unknown; unsupported fields are rejected.")
         editor = st.data_editor(profile_editor_frame(st.session_state.profiles), use_container_width=True,
                                 num_rows="fixed", key="profile_editor",
                                 column_config={"data_stays_onsite": st.column_config.SelectboxColumn("data_stays_onsite", options=[True, False, None]),
                                                "compute": st.column_config.SelectboxColumn("compute", options=["low", "medium", "high", None]),
-                                               "latency_ms": st.column_config.NumberColumn("latency_ms", min_value=0),
-                                               "bandwidth_mbps": st.column_config.NumberColumn("bandwidth_mbps", min_value=0),
-                                               "monthly_cost": st.column_config.NumberColumn("monthly_cost", min_value=0)})
-        uploaded = st.file_uploader("Import JSON file", type=["json"])
+                                               "latency_ms": st.column_config.NumberColumn("latency_ms", min_value=0, format="%.2f"),
+                                               "bandwidth_mbps": st.column_config.NumberColumn("bandwidth_mbps", min_value=0, format="%.2f"),
+                                               "monthly_cost": st.column_config.NumberColumn("monthly_cost (INR)", min_value=0, format="%.2f")})
+        st.caption("For nullable boolean capabilities or explicit null values, use the JSON editor below.")
+        uploaded = st.file_uploader("Upload tier-keyed JSON", type=["json"], key="profile_json_upload")
         if st.session_state.pending_profiles_json is not None:
             st.session_state.profiles_json_draft = st.session_state.pending_profiles_json
             st.session_state.pending_profiles_json = None
-        json_text = st.text_area("Or paste profiles as JSON", key="profiles_json_draft", height=230)
-        import_mode = st.radio("Apply from", ["Table editor", "JSON input"], horizontal=True)
+        json_text = st.text_area("Tier-keyed JSON editor", key="profiles_json_draft", height=260)
+        import_mode = st.radio("Configuration to validate", ["Editable table", "JSON editor / upload"], horizontal=True)
         if uploaded is not None and st.button("Load uploaded JSON", key="load_upload"):
             try:
                 st.session_state.pending_profiles_json = uploaded.getvalue().decode("utf-8")
                 st.rerun()
-            except Exception as exc:
+            except (UnicodeDecodeError, ValueError) as exc:
                 st.error(f"Could not read the uploaded JSON file: {exc}")
-        save_custom = st.button("Save Infrastructure & Continue", type="primary")
-        if save_custom:
-            try:
-                candidate = edited_frame_to_profiles(editor) if import_mode == "Table editor" else json.loads(json_text)
-                errors = profile_errors(candidate)
-                if errors:
-                    for error in errors:
-                        st.error(error)
-                else:
-                    changed = candidate != st.session_state.profiles
-                    st.session_state.profiles = candidate
-                    st.session_state.profiles_mode = mode
-                    st.session_state.profiles_done = True
-                    if changed and st.session_state.assessment is not None:
-                        st.session_state.assessment_outdated = True
-                        st.session_state.reviewed = st.session_state.understood = False
-                        st.session_state.explanation_generated_for_assessment_id = None
-                    st.session_state.custom_profiles_draft = deepcopy(candidate)
-                    go("Infrastructure Assessment"); st.rerun()
-            except (json.JSONDecodeError, TypeError, ValueError) as exc:
-                st.error(f"Could not parse profile data: {exc}")
+        candidate, parse_error = None, None
+        try:
+            candidate = edited_frame_to_profiles(editor) if import_mode == "Editable table" else json.loads(json_text)
+            errors = profile_errors(candidate)
+            if errors:
+                st.error("Configuration needs attention: " + " ".join(errors))
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            parse_error = exc
+            st.error(f"Could not parse profile data: {exc}")
+        valid = candidate is not None and not profile_errors(candidate) and parse_error is None
+        if st.button("Validate profiles and preview", key="validate_profiles_preview", type="primary", disabled=not valid):
+            st.session_state.profile_preview = deepcopy(candidate)
+            st.session_state.profile_preview_mode = import_mode
+            st.session_state.custom_confirm = False
+            st.rerun()
+        preview_is_current = (valid and st.session_state.profile_preview == candidate
+                              and st.session_state.profile_preview_mode == import_mode)
+        if st.session_state.profile_preview is not None and preview_is_current:
+            st.success("All four tiers and approved capability fields validate. Unknown values are preserved.")
+            st.dataframe(profile_editor_frame(st.session_state.profile_preview), use_container_width=True)
+        elif st.session_state.profile_preview is not None:
+            st.info("The configuration changed after its preview. Validate it again before applying.")
+        custom_confirmed = st.checkbox("Confirm this custom configuration", key="custom_confirm", disabled=not preview_is_current)
+        if st.button("Validate and apply custom profiles", key="apply_custom_profiles", type="primary", disabled=not (preview_is_current and custom_confirmed)):
+            applied = deepcopy(st.session_state.profile_preview)
+            changed = applied != st.session_state.profiles
+            st.session_state.profiles = applied
+            st.session_state.profiles_mode = mode
+            st.session_state.profiles_done = True
+            if changed and st.session_state.assessment is not None:
+                st.session_state.assessment_outdated = True
+                st.session_state.reviewed = st.session_state.understood = False
+                st.session_state.explanation_generated_for_assessment_id = None
+            st.session_state.custom_profiles_draft = deepcopy(applied)
+            st.success("Custom profiles validated, previewed, and applied.")
+            st.rerun()
     applied_source_matches = mode == st.session_state.profiles_mode
     if not applied_source_matches:
         st.info(f"{mode} is selected but not applied yet. Apply it before continuing.")
-    if st.button("Back to Requirements"):
-        go("Application Requirements"); st.rerun()
+    back_profiles, continue_profiles = st.columns(2)
+    with back_profiles:
+        if st.button("← Back to requirements", use_container_width=True):
+            go("Application Requirements"); st.rerun()
+    with continue_profiles:
+        if st.button("Continue to assessment →", type="primary",
+                     disabled=not (st.session_state.profiles_done and applied_source_matches),
+                     use_container_width=True):
+            go("Infrastructure Assessment"); st.rerun()
 
 elif page == "Infrastructure Assessment":
     heading("Step 3 of 5", "Run infrastructure assessment", "Hard constraints are checked before suitability scores are calculated.")
