@@ -1,39 +1,133 @@
-# EdgeWise — Intelligent Infrastructure Placement Advisor
+# EdgeWise — Edge vs Cloud Placement Advisor
 
-EdgeWise compares application requirements with On Device, Far Edge, Regional Edge, and Cloud infrastructure. Its deterministic decision engine checks hard constraints before it calculates a transparent suitability score. An unknown capability remains unknown; it is never converted to zero.
+EdgeWise is a decision-support application for developers and architects choosing where an AI workload should run. It evaluates four deployment tiers against saved workload requirements and infrastructure capability data, then explains the resulting recommendation. It does not deploy workloads.
 
-## Start the app
+**Hackathon:** Infosys IGNITE ENG NEXT 2026 Hack-AI-Thon<br>
+**Problem statement:** NC-03 — Edge vs Cloud Placement Advisor
 
-From this folder in PowerShell:
+## Problem statement and proposed solution
 
-```powershell
-py -m pip install -r requirements.txt
-py -m streamlit run app.py
+AI workloads have different latency, privacy, compute, bandwidth, and cost needs. EdgeWise compares those needs with available infrastructure data so teams can review feasible placement options and their trade-offs in one place. A deterministic decision engine performs all feasibility checks, scoring, ranking, and recommendation; optional Qualcomm Imagine AI text explains the already-computed result.
+
+## Key features
+
+- Compare **On Device**, **Far Edge**, **Regional Edge**, and **Cloud**.
+- Set workload latency, onsite data residency, minimum compute, bandwidth, and monthly cost requirements.
+- Use the illustrative profiles or enter infrastructure capabilities in the table or JSON input. Missing capability data can remain unknown.
+- Review feasibility status and constraint evidence for each tier, score breakdowns, ranking, and feasible alternatives.
+- Download an assessment JSON report.
+- See a concise explanation from Qualcomm Imagine when configured and available, with a deterministic local explanation as fallback.
+- Navigate through the requirements, infrastructure, assessment, results, and explanation workflow.
+
+## How EdgeWise works
+
+1. **Define requirements.** Enter the maximum latency, whether data must stay onsite, minimum compute, required bandwidth, and maximum monthly cost for the workload.
+2. **Provide infrastructure data.** Use the built-in illustrative profiles or enter capability values for the four tiers. Unknown values may be left blank or set to `null`.
+3. **Check hard constraints.** The decision engine evaluates latency, onsite residency when required, compute, bandwidth, and monthly cost. A known failure makes a tier infeasible. Missing or invalid capability data leaves a tier unverified unless another known failure already makes it infeasible.
+4. **Score and rank feasible tiers.** Only tiers with confirmed feasibility receive a suitability score. The weighted factors are latency (25%), data residency (20%), compute (20%), bandwidth (15%), and monthly cost (20%). Tiers are ranked by score; exact ties follow the fixed order On Device, Far Edge, Regional Edge, Cloud. The top-ranked feasible tier is recommended. If no tier is confirmed feasible, there is no recommendation.
+5. **Review the result.** The app shows status and constraint evidence, score details, ranking, alternatives, and a downloadable JSON report.
+6. **Read the explanation.** If Qualcomm Imagine is configured, EdgeWise asks the model for concise prose based on authoritative evidence from the assessment. If configuration, the request, or the response is unavailable or invalid, EdgeWise uses its deterministic explanation. The engine's result remains authoritative in either case; AI text cannot change feasibility, scores, ranking, or recommendation.
+
+## Technology stack
+
+Verified from the project files:
+
+- Python
+- Streamlit for the application UI
+- Pandas for tabular comparison and score displays
+- Python standard library for JSON handling and the Qualcomm Imagine HTTP request
+- Pytest for automated tests
+
+Package dependencies are listed in [`requirements.txt`](requirements.txt). The AI integration does not require a separate HTTP client or dotenv package.
+
+## Project structure
+
+```text
+EdgeWise/
+├── app.py                      # Streamlit UI and assessment workflow
+├── ai_explainer.py             # Optional Qualcomm explanation and local fallback
+├── contracts.py                # Typed assessment and infrastructure data contracts
+├── decision_engine.py          # Input checks, feasibility, scoring, ranking, recommendation
+├── infrastructure_data.py      # Requirement defaults, tier labels, demo profiles, validation
+├── requirements.txt            # Runtime and test dependencies
+├── README.md
+└── tests/
+    ├── test_ai_explainer.py
+    ├── test_app_workflow.py
+    └── test_decision_engine.py
 ```
 
-Open the local address printed by Streamlit. The Home page starts with no fabricated assessment. Save requirements and infrastructure data, run an assessment, and then review the results and explanation.
+## Installation and local setup (Windows PowerShell)
 
-## Optional AI explanation
-
-The current project does not include a Qualcomm SDK, a configured Qualcomm endpoint/model, or an API integration to verify. EdgeWise therefore uses the deterministic local explanation in `ai_explainer.py`; the placement assessment remains fully functional without credentials or network access. No API key is required or read by the current app. Add provider integration only after selecting the supported SDK and endpoint for your Qualcomm AI account, and keep any credential in an environment variable or a local `.env` file (which `.gitignore` excludes).
-
-## Run checks
+From the project folder, create and activate a virtual environment, then install the listed dependencies:
 
 ```powershell
-py -m pytest
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
-## Data and scoring
+If PowerShell blocks environment activation, run the app and tests using the virtual environment's Python executable directly, as shown below.
 
-The default requirements and four infrastructure profiles are illustrative. They are not live provider measurements or quotes. Custom profile imports must use the exact four tier identifiers and supported capability fields; capability values may be `null` or omitted when unknown.
+### Optional Qualcomm Imagine configuration
 
-Only confirmed feasible tiers receive a score. Scores use the approved weights: latency 25%, data residency 20%, compute 20%, bandwidth 15%, and monthly cost 20%. The score is a suitability comparison, not a probability. Exact score ties follow canonical tier order: `on_device`, `far_edge`, `regional_edge`, `cloud`.
+The AI explanation is optional. Set these environment variables to enable it:
 
-`decision_engine.py` has no AI dependency. `ai_explainer.py` creates a local explanation from the structured result and does not alter the recommendation.
+- `QUALCOMM_IMAGINE_API_KEY` — your Qualcomm Imagine API key
+- `QUALCOMM_IMAGINE_ENDPOINT` — the API base URL; for example, `https://aisuite.cirrascale.com/apis/v2`
+- `QUALCOMM_IMAGINE_MODEL` — model name; the default in the code is `Llama-3.1-8B`
 
-## Troubleshooting
+For the current PowerShell session, set them without putting credentials in source files:
 
-- If Streamlit reports a port conflict, stop the existing app or start another port with `py -m streamlit run app.py --server.port 8502`.
-- If the app shows no recommendation, inspect the constraint evidence. A tier can be unverified when required capability information is missing or invalid; unknown values are not treated as zero.
-- If custom profile input is rejected, use only the four tier keys and the five documented capability names. Numeric capabilities must be finite and nonnegative; compute must be `low`, `medium`, or `high`; onsite capability must be a boolean. Use `null` or omit a field for unknown information.
-- The demonstration infrastructure values are illustrative and are not live provider measurements or quotes.
+```powershell
+$env:QUALCOMM_IMAGINE_API_KEY = "<your API key>"
+$env:QUALCOMM_IMAGINE_ENDPOINT = "https://aisuite.cirrascale.com/apis/v2"
+$env:QUALCOMM_IMAGINE_MODEL = "Llama-3.1-8B"
+```
+
+The project also supports loading these names from a local `.env` file, and `.gitignore` excludes `.env`. Keep the file local and never commit credentials. No `.env.example` is present in this repository.
+
+Without a usable API key and endpoint, or if the request or response fails validation, the app displays the deterministic fallback explanation.
+
+## Run the Streamlit application
+
+With the virtual environment active:
+
+```powershell
+python -m streamlit run app.py
+```
+
+Or run it without activating the environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+Open the local address printed by Streamlit. Start on Home, save requirements and infrastructure data, run the assessment, then review the results and explanation.
+
+## Run automated tests
+
+With the virtual environment active:
+
+```powershell
+python -m pytest -q
+```
+
+Or use its Python executable directly:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+The AI integration tests use mocked HTTP responses and do not require an API key or a real API request.
+
+## Current limitations
+
+- The default workload requirements and infrastructure profiles are illustrative, not live measurements, provider quotes, or automatic discovery. Review or replace the capability data for your own scenario.
+- The supported requirements are limited to the five fields listed above. **Criticality is not currently an input** to validation or scoring.
+- Results are decision support. EdgeWise does not provision or deploy a workload.
+- The Qualcomm explanation depends on a working endpoint, credentials, and a response that passes the implementation's checks. The deterministic explanation remains available when AI is unavailable.
+
+## Team and event details
+
+This README identifies the project and event supplied for the hackathon. Team member names and roles are not documented in the repository.
