@@ -56,6 +56,8 @@ def test_full_workflow_saves_assesses_reviews_and_explains():
     at.checkbox(key="demo_confirm").check()
     at.run(timeout=30)
     _click(at, "Use demo profiles")
+    assert at.session_state["page_menu"] == "Infrastructure Data Source"
+    assert at.session_state["profiles_done"] is True
     _click(at, "Continue to assessment →")
     assert at.session_state["page_menu"] == "Infrastructure Assessment"
     _click(at, "Run Assessment")

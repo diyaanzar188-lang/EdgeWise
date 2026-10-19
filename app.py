@@ -402,7 +402,7 @@ elif page == "Infrastructure Data Source":
                 st.session_state.assessment_outdated = True
                 st.session_state.reviewed = st.session_state.understood = False
                 st.session_state.explanation_generated_for_assessment_id = None
-            go("Infrastructure Assessment"); st.rerun()
+            st.success("Demo profiles applied and confirmed. Continue when you are ready.")
     else:
         st.caption("Canonical tiers: on_device, far_edge, regional_edge, cloud. Missing or null values remain unknown; unsupported fields are rejected.")
         editor = st.data_editor(profile_editor_frame(st.session_state.profiles), use_container_width=True,
