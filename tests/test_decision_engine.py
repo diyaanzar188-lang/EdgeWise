@@ -3,6 +3,7 @@ import copy
 import pytest
 
 from decision_engine import TIER_ORDER, WEIGHTS, evaluate_placement
+from ai_explainer import explain_assessment
 
 
 REQ = {
@@ -197,4 +198,21 @@ def test_reasons_exist_for_every_status_and_constraint():
     for tier in result["tiers"]:
         assert tier["reasons"]
         assert all(constraint["reason"] for constraint in tier["constraints"])
+
+
+def test_local_explanation_uses_real_assessment_without_ai_service():
+    assessment = evaluate_placement(REQ, DEMO)
+    explanation = explain_assessment(assessment)
+    assert "Far Edge" in explanation
+    assert "suitability score" in explanation
+    assert "not a probability" in explanation
+    assert explanation == explain_assessment(assessment)
+
+
+def test_local_explanation_handles_no_confirmed_feasible_tier():
+    profiles = uniform_profiles()
+    for profile in profiles.values():
+        profile["compute"] = "low"
+    explanation = explain_assessment(evaluate_placement(REQ, profiles))
+    assert "No placement is recommended" in explanation
 
