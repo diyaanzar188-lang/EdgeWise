@@ -49,10 +49,14 @@ def _seed_current_assessment(at: AppTest, page="Placement Results"):
 def test_full_workflow_saves_assesses_reviews_and_explains():
     at = AppTest.from_file(APP_PATH).run(timeout=30)
     assert not at.exception
-    _click(at, "Start assessment")
+    _click(at, "Define requirements  →")
     _click(at, "Save Requirements & Continue")
+    assert at.session_state["requirements"]["min_compute"] == "medium"
     assert at.session_state["page_menu"] == "Infrastructure Data Source"
-    _click(at, "Save Infrastructure & Continue")
+    at.checkbox(key="demo_confirm").check()
+    at.run(timeout=30)
+    _click(at, "Use demo profiles")
+    _click(at, "Continue to assessment →")
     assert at.session_state["page_menu"] == "Infrastructure Assessment"
     _click(at, "Run Assessment")
     assert at.session_state["page_menu"] == "Placement Results"
@@ -70,9 +74,27 @@ def test_full_workflow_saves_assesses_reviews_and_explains():
 def test_custom_source_selection_survives_streamlit_rerun():
     at = AppTest.from_file(APP_PATH).run(timeout=30)
     _navigate(at, "Infrastructure Data Source")
-    at.radio(key="profile_source_mode").set_value("Custom data")
+    at.radio(key="profile_source_mode").set_value("Custom configuration")
     at.run(timeout=30)
-    assert at.radio(key="profile_source_mode").value == "Custom data"
+    assert at.radio(key="profile_source_mode").value == "Custom configuration"
+    assert not at.exception, [exception.message for exception in at.exception]
+
+
+def test_teammate_custom_configuration_is_validated_previewed_and_applied():
+    at = AppTest.from_file(APP_PATH).run(timeout=30)
+    _navigate(at, "Infrastructure Data Source")
+    at.radio(key="profile_source_mode").set_value("Custom configuration")
+    at.run(timeout=30)
+    assert at.button(key="validate_profiles_preview").disabled is False
+    _click(at, "Validate profiles and preview")
+    assert at.session_state["profile_preview"] == get_demo_profiles()
+    at.checkbox(key="custom_confirm").check()
+    at.run(timeout=30)
+    _click(at, "Validate and apply custom profiles")
+    assert at.session_state["profiles_mode"] == "Custom configuration"
+    assert at.session_state["profiles_done"] is True
+    _click(at, "Continue to assessment →")
+    assert at.session_state["page_menu"] == "Infrastructure Assessment"
     assert not at.exception, [exception.message for exception in at.exception]
 
 
